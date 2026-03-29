@@ -22,11 +22,14 @@ This relationship ($\alpha$) can be estimated in population pharmacokinetic anal
 The body size metric ($BSM_i$) which most closely approximates a linear relationship with the primary PK parameter for dosing can be inferred from the fitted relationship of the PK parameter and body weight and the fitted relationship between body weight and the body size metric. 
 
 $$WT_i  = BSM_i^\beta$$
-These two equations can be combined as follows:
+These two equations can be combined by substituting the second equation into the first for the value of the body size metric ($WT_i$) as follows:
 
-$$CL_i  = WT_i^\alpha = (BSM_i^\beta)^\alpha = (BSM_i^\beta^\alpha)$$
-If the objective is to identify a dose that is as close to linear (mg / $BSM_i$) as possible, then the goal should for $\alpha * \beta ~ 1$. THe value of $\alpha$, the power by which the primary PK parameter for dosing scales with body weight, is estimated in a representative population. The value of $\beta$, the power for the relationship between a body size metric and body weight, can be estimated from a large population (e.g., NHANES) or a representative sample of the target population.
+$$CL_i = WT_i^\alpha = (BSM_i^\beta)^\alpha = (BSM_i)^\gamma$$
+If the objective is to identify a dose that is as close to linear (mg / $BSM_i$) as possible, then the goal should for $\gamma ~ 1$. The value of $\alpha$, the power by which the primary PK parameter for dosing scales with body weight, is estimated in a representative population. The value of $\beta$, the power for the relationship between a body size metric and body weight, can be estimated from a large population (e.g., NHANES) or a representative sample of the target population. 
 
+The target then can be expressed simply a:
+
+$$\gamma = \alpha * \beta =1 $$
 This approach can be explored using `NHANES` as a representative dataset of adult human clinical trial participants.
 
 # Set Up
@@ -136,14 +139,14 @@ concordplot <- function(metric, col_point = "grey30", col_fit = "black", shape_p
     geom_smooth(method = "loess", se = FALSE, color = col_point, linetype = "dashed") + 
     scale_x_log10(guide = "axis_logticks") +
     scale_y_log10(guide = "axis_logticks") + 
-    labs(caption = expression(paste("*beta* = ", coef))) +
+    labs(caption = paste("Beta = ", coef)) +
     theme_bw()
   
   return(plot)
 }
 ```
 
-```{r plot-concord-weight fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
+```{r plot-concord-weight, fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 map(params, concordplot)
 ```
 
@@ -151,33 +154,82 @@ map(params, concordplot)
 
 Fit log-log regressions based on `NHANES` to determine the $\beta$ values.
 
-```{r weight-metric-fit}
-ll_fit <- data.frame("PARAM" = params, SLOPE = NA_real_)
-for(par in params){
-  coef <- lm(log(anthro_adult[["WTKG"]]) ~ log(anthro_adult[[par]]))$coefficients[[2]]
-  ll_fit$SLOPE[ll_fit$PARAM==par] = coef
+```{r weight-metric-fit-summary-function}
+sumfit_loglog <- function(exp_var_x,
+                          exp_var_y = "WTKG", 
+                          method = "normal",
+                          ci = 0.95,
+                          sigdigits = 3) {
+  
+  if(!method %in% c("normal", "tdist")) {rlang::abort(message = "argument `method` must be 'normal' or 'tdist'")}
+  if(!ci %in% c(0.90, 0.95)) {rlang::abort(message = "argument `ci` must be 0.90 or 0.95")}
+
+  form <- stats::as.formula(paste(paste0("log(",exp_var_y,")"),"~",paste0("log(",exp_var_x,")")))
+  fit <- stats::lm(form, anthro_adult)
+  
+  int <- stats::coef(fit)[[1]]
+  est <- stats::coef(fit)[[2]]
+  se <- sqrt(diag(stats::vcov(fit)))[[2]]
+  z <- stats::qt((1 + ci)/2, (length(fit$residuals)-1))
+
+  tab <- data.frame(
+    DV = exp_var_x, 
+    IDV = exp_var_y,
+    CI = paste0(ci*100, "%"),
+    Intercept = signif(int, digits=sigdigits),
+    Beta = signif(est, digits = sigdigits),
+    StandardError = signif(se, digits=sigdigits),
+    LCL_Beta = dplyr::case_when(method == "normal" & ci == 0.95 ~ signif(est - 1.96*se, digits=sigdigits),
+                           method == "normal" & ci == 0.90 ~ signif(est - 1.64*se, digits=sigdigits),
+                           method == "tdist" ~ signif(est - z*se, digits=sigdigits),
+                           .default = NA_real_),
+    UCL_Beta = dplyr::case_when(method == "normal" & ci == 0.95 ~ signif(est + 1.96*se, digits=sigdigits),
+                           method == "normal" & ci == 0.90 ~ signif(est + 1.64*se, digits=sigdigits),
+                           method == "tdist" ~ signif(est + z*se, digits=sigdigits),
+                           .default = NA_real_))
+
+  return(tab)
 } 
 
-fit <- ll_fit %>% 
-  bind_rows(data.frame("PARAM" = "WTKG", SLOPE = 1))
+```
+
+```{r weight-metric-fit-summary}
+fit <- map_df(params, sumfit_loglog) %>% 
+  mutate(BSM = case_when(DV == "HTCM" ~ "Height (cm)", 
+                         DV == "BMIKGM2" ~ "BMI (kg/m2)",
+                         DV == "BSAMOSM2" ~ "BSA-Moesteller (m2)", 
+                         DV == "BSADUBM2" ~ "BSA-DuBois (m2)", 
+                         DV == "WTKG" ~ "Body Weight (kg)", 
+                         .default = paste(gsub("KG", "", DV), "(kg)"))
+         ) %>% 
+  mutate(BSM = factor(BSM, 
+                      levels = c("Height (cm)",
+                                "BSA-DuBois (m2)" ,
+                                "BSA-Moesteller (m2)",
+                                 "AIBW (kg)",
+                                 "FFW (kg)",
+                                 "BMI (kg/m2)",
+                                 "LBW (kg)",
+                                 "IBW (kg)", 
+                                 "Body Weight (kg)")))
 ```
 
 ```{r summary-fit}
 summary_fit <- fit %>% 
-  mutate(Y01 = signif(SLOPE*0.1, digits=3),
-         Y03 = signif(SLOPE*0.3, digits=3),
-         Y05 = signif(SLOPE*0.5, digits=3),
-         Y07 = signif(SLOPE*0.7, digits=3),
-         Y09 = signif(SLOPE*0.9, digits=3),
-         Y10 = signif(SLOPE, digits=3), 
-         Y13 = signif(SLOPE*1.3, digits=3),
-         Y15 = signif(SLOPE*1.5, digits=3), 
-         Y17 = signif(SLOPE*1.7, digits=3),
-         Y20 = signif(SLOPE*2, digits=3)) 
+  mutate(GAMMA_ALPHA01 = signif(Beta*0.1, digits=3),
+         GAMMA_ALPHA03 = signif(Beta*0.3, digits=3),
+         GAMMA_ALPHA05 = signif(Beta*0.5, digits=3),
+         GAMMA_ALPHA07 = signif(Beta*0.7, digits=3),
+         GAMMA_ALPHA09 = signif(Beta*0.9, digits=3),
+         GAMMA_ALPHA10 = signif(Beta, digits=3), 
+         GAMMA_ALPHA13 = signif(Beta*1.3, digits=3),
+         GAMMA_ALPHA15 = signif(Beta*1.5, digits=3), 
+         GAMMA_ALPHA17 = signif(Beta*1.7, digits=3),
+         GAMMA_ALPHA20 = signif(Beta*2, digits=3)) 
 
 summary_fit_long <- summary_fit %>% 
-  pivot_longer(Y01:Y20, names_to = "WTEXP", values_to = "XWTEXP") %>% 
-  mutate(WTEXP = as.numeric(gsub("[^0-9]+", "", WTEXP))/10)
+  pivot_longer(GAMMA_ALPHA01:GAMMA_ALPHA20, names_to = "Alpha", values_to = "Gamma") %>% 
+  mutate(Alpha = as.numeric(gsub("[^0-9]+", "", Alpha))/10) 
 ```
 
 
@@ -186,13 +238,16 @@ summary_fit_long <- summary_fit %>%
 Plot the relationship between values of $\alpha$ (`y`) to be fitted from clinical data for molecules and the fitted values of $\beta$ * $\alpha$ (`x * y`).
 
 ```{r plot-concord-exp, fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
-ggplot(aes(x = WTEXP, y = XWTEXP, col = PARAM), data = summary_fit_long) + 
+ggplot(aes(x = Alpha, y = Gamma, col = BSM), data = summary_fit_long) + 
   geom_point() +
-  geom_abline(aes(intercept = 0, slope = SLOPE, col = PARAM), data = fit) + 
+  geom_abline(aes(intercept = 0, slope = Beta, col = BSM), data = fit) + 
   geom_hline(yintercept = 1) + 
   geom_hline(yintercept = c(0.8, 1.2), linetype = "dashed") + 
   scale_x_continuous(limits = c(NA, 2), breaks = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2)) + 
   scale_y_continuous(limits = c(NA, 2), breaks = c(0, 0.5, 1, 1.5, 2)) + 
+  labs(y = expression(paste("Dosing Body Size Metric Exponent (", gamma, ")")), 
+       x = expression(paste("Body Weight Exponent (", alpha, ")")), 
+       col = expression(paste("Body Size Metric (slope = ", beta, ")")))+
   theme_bw() + 
   theme(panel.grid.major.y = element_blank(), 
         panel.grid.minor.y = element_blank())
