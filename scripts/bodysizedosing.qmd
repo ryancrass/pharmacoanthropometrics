@@ -5,26 +5,45 @@ format: html
 editor: visual
 ---
 
+# Thesis
+
+The pharmacokinetics of both large and small molecules scale by body weight between (e.g., animal to human dose preditions) and within (e.g., adult to pediatric dose predictions). The genereal functional form for this scaling relationship is the power model. Given most drugs are dosed to target average expoosure (Cavg, AUC), this relationship is described for clearance below, but can also be applied to central volume to target maximal (Cmax) concentration threshoods.
+
+$$CL_i  = WT_i^\alpha$$
+The magnitude of the scaling relationship with body weight ($\alpha$) and the therapeutic index determine the optimal dosing paradigm. Assuming that body weight is the primary covariate of clearance, one would want to use a metric for $WT_i$ that results in an $\alpha = 1$ in the target population. 
+
+To this end some authors have suggested testing a host of body size metrics (e.g., body weight [WT], body surface area [BSA], adjusted ideal body weight [AIBW]) using data from the first-in-human clinical study and selecting the metric that results in $\alpha ~ 1$. This is a valid approach; however, it introduces the operational challenge of testing multiple correlated metrics as excoriates and selecting based on the estimation rather than evaluating a single metric (e.g., body weight). Furthermore, selection of alternative body size metrics, such ask AIBW, may complicate translation to external populations, such as pediatrics, in which these metrics are not validated.
+
+I propose a simplified unified approach to evaluation of approach to assessing a body size metric for dosing to allow linear (e.g., mg / unit body size) calculation of dose amounts. As established previously, the relationship between the primary PK parameter for dosing (in this example CL) and body weigh can be described using a power unction (often centered on a reference weight, such as 70 kg): 
+
+$$CL_i  = WT_i^\alpha$$
+This relationship ($\alpha$) can be estimated in population pharmacokinetic analysis of the first-in-human clinical trial. No other body size metrics need to be evaluated. 
+
+The body size metric ($BSM_i$) which most closely approximates a linear relationship with the primary PK parameter for dosing can be inferred from the fitted relationship of the PK parameter and body weight and the fitted relationship between body weight and the body size metric. 
+
+$$WT_i  = BSM_i^\beta$$
+These two equations can be combined as follows:
+
+$$CL_i  = WT_i^\alpha = (BSM_i^\beta)^\alpha = (BSM_i^\beta^\alpha)$$
+If the objective is to identify a dose that is as close to linear (mg / $BSM_i$) as possible, then the goal should for $\alpha * \beta ~ 1$. THe value of $\alpha$, the power by which the primary PK parameter for dosing scales with body weight, is estimated in a representative population. The value of $\beta$, the power for the relationship between a body size metric and body weight, can be estimated from a large population (e.g., NHANES) or a representative sample of the target population.
+
+This approach can be explored using `NHANES` as a representative dataset of adult human clinical trial participants.
 
 # Set Up
 
-## Packages 
+## Packages
 
-```{r pkgs}
+```{r pkgs, message=FALSE, warning=FALSE}
 rm(list=ls())
 library(nhanesA)
 library(tidyverse)
 ```
 
-#y = x^alpha, can be fitted  (e.g. CL = (WT/70)^alpha)
-#x = z^beta, can be fitted for a population (e.g., WT = BSA^beta)
-#y = (z^beta)^alpha = z^(beta*alpha)
-#Desire for linear relationship (e.g., mg/z) between response variable y and dosing variable z, thus
-# 1 = beta*alpha
-
 ## NHANES Data
 
-```{r nhanes}
+Read in the relevant datasets from the `NHANES` dataset. Remove mixxing values for key variables used to derive common body size metrics for dosing.
+
+```{r nhanes, message=FALSE, warning=FALSE}
 bmx <- nhanes("BMX")
 demo <- nhanes("DEMO")
 
@@ -34,9 +53,9 @@ data <- left_join(bmx, demo) %>%
 
 # Define Body Size Metrics
 
-Source: https://pubmed.ncbi.nlm.nih.gov/22711238/
+Derive alternative body size metrics ($BSM_i$) using the equations outined in Pai et al. 2012 (https://pubmed.ncbi.nlm.nih.gov/22711238/). Subset to adults and pivot to a longer version.
 
-```{r anthropometrics}
+```{r anthropometrics, message=FALSE, warning=FALSE}
 
 anthro <- data %>% 
   select(SEQN, 
@@ -63,10 +82,63 @@ anthro <- data %>%
 
 anthro_adult <- anthro %>% 
   filter(AGEYR>18)
+anthro_adult_long <- anthro_adult %>% 
+  pivot_longer(WTKG:LBWKG, names_to = "METRIC", values_to = "VALUE")
 ```
 
-```{r weight-metric-fit}
+Vector of variable names for body siee metrics of interest.
+
+```{r params, message=FALSE, warning=FALSE, }
 params <- c("HTCM", "BMIKGM2", "BSAMOSM2", "BSADUBM2", "IBWKG", "AIBWKG", "FFWKG", "LBWKG")
+```
+
+Define dataset for plotting with some additional derived variables. 
+
+```{r plotdata_long}
+plotdata_long <- anthro_adult_long %>% 
+  mutate(UNITS = case_when(grepl("KGM2", METRIC) ~ "KG/M2", 
+                           grepl("KG", METRIC) ~ "KG", 
+                           grepl("M2", METRIC) ~ "M2", 
+                           grepl("CM", METRIC) ~ "CM"))
+```
+
+# Exploatory Analysis
+
+## Distributions
+
+Visualize the distributions of the various body size metrics.
+
+```{r visualize, fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
+ggplot(aes(x=VALUE, color = METRIC, fill = METRIC), data = plotdata_long) +
+  geom_density(alpha = 0.7) + 
+  facet_wrap(~UNITS, scales = "free")+
+  theme_bw() 
+
+ggplot(aes(x=VALUE, color = METRIC, fill = METRIC), data = plotdata_long) +
+  geom_density(alpha = 0.7) + 
+  scale_x_log10(guide = "axis_logticks")+
+  theme_bw()
+
+```
+## Concordance with Body Weight
+
+Visualize log-log relationship between each metric and bdoy weight. Define function for plots
+```{r plot-concord-weight}
+ggplot(aes(y = WTKG, x = HTCM), data = anthro_adult) + 
+    geom_point(shape = 22, color = "gray30")+
+    geom_smooth(method = "lm", se = FALSE, color = "black") +
+    geom_smooth(method = "loess", se = FALSE, color = "black", linetype = "dashed") + 
+    scale_x_log10(guide = "axis_logticks") +
+    scale_y_log10(guide = "axis_logticks") + 
+    theme_bw()
+```
+
+
+## Log-Log Regression
+
+Fit log-log regressions based on `NHANES` to determine the $\beta$ values.
+
+```{r weight-metric-fit}
 ll_fit <- data.frame("PARAM" = params, SLOPE = NA_real_)
 for(par in params){
   coef <- lm(log(anthro_adult[["WTKG"]]) ~ log(anthro_adult[[par]]))$coefficients[[2]]
@@ -96,15 +168,19 @@ summary_fit_long <- summary_fit %>%
 ```
 
 
-```{r plot}
+# Plot 
+
+Plot the relationship between values of $\alpha$ (`y`) to be fitted from clinical data for molecules and the fitted values of $\beta$ * $\alpha$ (`x * y`).
+
+```{r plot-concord-exp, tfig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 ggplot(aes(x = WTEXP, y = XWTEXP, col = PARAM), data = summary_fit_long) + 
   geom_point() +
   geom_abline(aes(intercept = 0, slope = SLOPE, col = PARAM), data = fit) + 
   geom_hline(yintercept = 1) + 
   geom_hline(yintercept = c(0.8, 1.2), linetype = "dashed") + 
-  scale_x_continuous(limits = c(NA, 2), breaks = c(0, 0.5, 0.75, 1, 1.25, 1.5, 2)) + 
+  scale_x_continuous(limits = c(NA, 2), breaks = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2)) + 
   scale_y_continuous(limits = c(NA, 2), breaks = c(0, 0.5, 1, 1.5, 2)) + 
   theme_bw() + 
   theme(panel.grid.major.y = element_blank(), 
         panel.grid.minor.y = element_blank())
-```         
+```
