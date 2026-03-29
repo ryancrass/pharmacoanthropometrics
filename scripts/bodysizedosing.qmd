@@ -122,17 +122,25 @@ ggplot(aes(x=VALUE, color = METRIC, fill = METRIC), data = plotdata_long) +
 ```
 ## Concordance with Body Weight
 
-Visualize log-log relationship between each metric and bdoy weight. Define function for plots
-```{r plot-concord-weight}
-ggplot(aes(y = WTKG, x = HTCM), data = anthro_adult) + 
-    geom_point(shape = 22, color = "gray30")+
-    geom_smooth(method = "lm", se = FALSE, color = "black") +
-    geom_smooth(method = "loess", se = FALSE, color = "black", linetype = "dashed") + 
+Visualize log-log relationship between each metric and bdoy weight. Define function for plots.
+
+```{r plot-concord-weight-fxn}
+concordplot <- function(metric, col_point = "grey30", col_fit = "black", shape_point = 22){
+  plot <- ggplot(aes(y = WTKG, x = !!sym(metric)), data = anthro_adult) + 
+    geom_point(shape = shape_point, color = col_fit)+
+    geom_smooth(method = "lm", se = FALSE, color = col_fit) +
+    geom_smooth(method = "loess", se = FALSE, color = col_point, linetype = "dashed") + 
     scale_x_log10(guide = "axis_logticks") +
     scale_y_log10(guide = "axis_logticks") + 
     theme_bw()
+  
+  return(plot)
+}
 ```
 
+```{r plot-concord-weight fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
+map(params, concordplot)
+```
 
 ## Log-Log Regression
 
@@ -172,7 +180,7 @@ summary_fit_long <- summary_fit %>%
 
 Plot the relationship between values of $\alpha$ (`y`) to be fitted from clinical data for molecules and the fitted values of $\beta$ * $\alpha$ (`x * y`).
 
-```{r plot-concord-exp, tfig.height=4, fig.width=6, message=FALSE, warning=FALSE}
+```{r plot-concord-exp, fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 ggplot(aes(x = WTEXP, y = XWTEXP, col = PARAM), data = summary_fit_long) + 
   geom_point() +
   geom_abline(aes(intercept = 0, slope = SLOPE, col = PARAM), data = fit) + 
