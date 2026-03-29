@@ -242,29 +242,131 @@ window.Quarto = {
 </div>
 </div>
 </section>
-<section id="concordance-with-body-weight" class="level2">
-<h2 class="anchored" data-anchor-id="concordance-with-body-weight">Concordance with Body Weight</h2>
-<p>Visualize log-log relationship between each metric and bdoy weight. Define function for plots.</p>
+<section id="fit-the-log-log-regression" class="level2">
+<h2 class="anchored" data-anchor-id="fit-the-log-log-regression">Fit the log-log regression</h2>
+<p>Fit log-log regressions based on <code>NHANES</code> to determine the <span class="math inline">\(\beta\)</span> values.</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>concordplot <span class="ot">&lt;-</span> <span class="cf">function</span>(metric, <span class="at">col_point =</span> <span class="st">"grey30"</span>, <span class="at">col_fit =</span> <span class="st">"black"</span>, <span class="at">shape_point =</span> <span class="dv">22</span>){</span>
-<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>  mod <span class="ot">&lt;-</span> <span class="fu">lm</span>(<span class="fu">log</span>(anthro_adult[[<span class="st">"WTKG"</span>]]) <span class="sc">~</span> <span class="fu">log</span>(anthro_adult[[metric]]))</span>
-<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>  coef <span class="ot">&lt;-</span> <span class="fu">signif</span>(mod<span class="sc">$</span>coefficients[[<span class="dv">2</span>]], <span class="at">digits=</span><span class="dv">3</span>)</span>
-<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  plot <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> WTKG, <span class="at">x =</span> <span class="sc">!!</span><span class="fu">sym</span>(metric), <span class="at">col =</span> SEX), <span class="at">data =</span> anthro_adult) <span class="sc">+</span> </span>
-<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">shape =</span> shape_point, <span class="at">alpha_point =</span> <span class="fl">0.5</span>)<span class="sc">+</span></span>
-<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>, <span class="at">color =</span> col_fit) <span class="sc">+</span></span>
-<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"loess"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>, <span class="at">color =</span> col_point, <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span> </span>
-<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_x_log10</span>(<span class="at">guide =</span> <span class="st">"axis_logticks"</span>) <span class="sc">+</span></span>
-<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_y_log10</span>(<span class="at">guide =</span> <span class="st">"axis_logticks"</span>) <span class="sc">+</span> </span>
-<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">caption =</span> <span class="fu">paste</span>(<span class="st">"Beta = "</span>, coef)) <span class="sc">+</span></span>
-<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>()</span>
-<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(plot)</span>
-<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb8"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb8-1"><a href="#cb8-1" aria-hidden="true" tabindex="-1"></a>sumfit_loglog <span class="ot">&lt;-</span> <span class="cf">function</span>(exp_var_x,</span>
+<span id="cb8-2"><a href="#cb8-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">exp_var_y =</span> <span class="st">"WTKG"</span>, </span>
+<span id="cb8-3"><a href="#cb8-3" aria-hidden="true" tabindex="-1"></a>                          <span class="at">method =</span> <span class="st">"normal"</span>,</span>
+<span id="cb8-4"><a href="#cb8-4" aria-hidden="true" tabindex="-1"></a>                          <span class="at">ci =</span> <span class="fl">0.95</span>,</span>
+<span id="cb8-5"><a href="#cb8-5" aria-hidden="true" tabindex="-1"></a>                          <span class="at">sigdigits =</span> <span class="dv">3</span>) {</span>
+<span id="cb8-6"><a href="#cb8-6" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-7"><a href="#cb8-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span>method <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"normal"</span>, <span class="st">"tdist"</span>)) {rlang<span class="sc">::</span><span class="fu">abort</span>(<span class="at">message =</span> <span class="st">"argument `method` must be 'normal' or 'tdist'"</span>)}</span>
+<span id="cb8-8"><a href="#cb8-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span>ci <span class="sc">%in%</span> <span class="fu">c</span>(<span class="fl">0.90</span>, <span class="fl">0.95</span>)) {rlang<span class="sc">::</span><span class="fu">abort</span>(<span class="at">message =</span> <span class="st">"argument `ci` must be 0.90 or 0.95"</span>)}</span>
+<span id="cb8-9"><a href="#cb8-9" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-10"><a href="#cb8-10" aria-hidden="true" tabindex="-1"></a>  form <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">as.formula</span>(<span class="fu">paste</span>(<span class="fu">paste0</span>(<span class="st">"log("</span>,exp_var_y,<span class="st">")"</span>),<span class="st">"~"</span>,<span class="fu">paste0</span>(<span class="st">"log("</span>,exp_var_x,<span class="st">")"</span>)))</span>
+<span id="cb8-11"><a href="#cb8-11" aria-hidden="true" tabindex="-1"></a>  fit <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">lm</span>(form, anthro_adult)</span>
+<span id="cb8-12"><a href="#cb8-12" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb8-13"><a href="#cb8-13" aria-hidden="true" tabindex="-1"></a>  int <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">coef</span>(fit)[[<span class="dv">1</span>]]</span>
+<span id="cb8-14"><a href="#cb8-14" aria-hidden="true" tabindex="-1"></a>  est <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">coef</span>(fit)[[<span class="dv">2</span>]]</span>
+<span id="cb8-15"><a href="#cb8-15" aria-hidden="true" tabindex="-1"></a>  se <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(stats<span class="sc">::</span><span class="fu">vcov</span>(fit)))[[<span class="dv">2</span>]]</span>
+<span id="cb8-16"><a href="#cb8-16" aria-hidden="true" tabindex="-1"></a>  z <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">qt</span>((<span class="dv">1</span> <span class="sc">+</span> ci)<span class="sc">/</span><span class="dv">2</span>, (<span class="fu">length</span>(fit<span class="sc">$</span>residuals)<span class="sc">-</span><span class="dv">1</span>))</span>
+<span id="cb8-17"><a href="#cb8-17" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-18"><a href="#cb8-18" aria-hidden="true" tabindex="-1"></a>  tab <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
+<span id="cb8-19"><a href="#cb8-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">DV =</span> exp_var_x, </span>
+<span id="cb8-20"><a href="#cb8-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">IDV =</span> exp_var_y,</span>
+<span id="cb8-21"><a href="#cb8-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">CI =</span> <span class="fu">paste0</span>(ci<span class="sc">*</span><span class="dv">100</span>, <span class="st">"%"</span>),</span>
+<span id="cb8-22"><a href="#cb8-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">Intercept =</span> <span class="fu">signif</span>(int, <span class="at">digits=</span>sigdigits),</span>
+<span id="cb8-23"><a href="#cb8-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">Beta =</span> <span class="fu">signif</span>(est, <span class="at">digits =</span> sigdigits),</span>
+<span id="cb8-24"><a href="#cb8-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">StandardError =</span> <span class="fu">signif</span>(se, <span class="at">digits=</span>sigdigits),</span>
+<span id="cb8-25"><a href="#cb8-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">LCL_Beta =</span> dplyr<span class="sc">::</span><span class="fu">case_when</span>(method <span class="sc">==</span> <span class="st">"normal"</span> <span class="sc">&amp;</span> ci <span class="sc">==</span> <span class="fl">0.95</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">-</span> <span class="fl">1.96</span><span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
+<span id="cb8-26"><a href="#cb8-26" aria-hidden="true" tabindex="-1"></a>                           method <span class="sc">==</span> <span class="st">"normal"</span> <span class="sc">&amp;</span> ci <span class="sc">==</span> <span class="fl">0.90</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">-</span> <span class="fl">1.64</span><span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
+<span id="cb8-27"><a href="#cb8-27" aria-hidden="true" tabindex="-1"></a>                           method <span class="sc">==</span> <span class="st">"tdist"</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">-</span> z<span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
+<span id="cb8-28"><a href="#cb8-28" aria-hidden="true" tabindex="-1"></a>                           <span class="at">.default =</span> <span class="cn">NA_real_</span>),</span>
+<span id="cb8-29"><a href="#cb8-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">UCL_Beta =</span> dplyr<span class="sc">::</span><span class="fu">case_when</span>(method <span class="sc">==</span> <span class="st">"normal"</span> <span class="sc">&amp;</span> ci <span class="sc">==</span> <span class="fl">0.95</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">+</span> <span class="fl">1.96</span><span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
+<span id="cb8-30"><a href="#cb8-30" aria-hidden="true" tabindex="-1"></a>                           method <span class="sc">==</span> <span class="st">"normal"</span> <span class="sc">&amp;</span> ci <span class="sc">==</span> <span class="fl">0.90</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">+</span> <span class="fl">1.64</span><span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
+<span id="cb8-31"><a href="#cb8-31" aria-hidden="true" tabindex="-1"></a>                           method <span class="sc">==</span> <span class="st">"tdist"</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">+</span> z<span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
+<span id="cb8-32"><a href="#cb8-32" aria-hidden="true" tabindex="-1"></a>                           <span class="at">.default =</span> <span class="cn">NA_real_</span>))</span>
+<span id="cb8-33"><a href="#cb8-33" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb8-34"><a href="#cb8-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(tab)</span>
+<span id="cb8-35"><a href="#cb8-35" aria-hidden="true" tabindex="-1"></a>} </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 </div>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a><span class="fu">map</span>(params, concordplot)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb9"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb9-1"><a href="#cb9-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">map_df</span>(params, sumfit_loglog) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb10"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb10-1"><a href="#cb10-1" aria-hidden="true" tabindex="-1"></a>fit_labels <span class="ot">&lt;-</span> fit <span class="sc">%&gt;%</span> </span>
+<span id="cb10-2"><a href="#cb10-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="st">`</span><span class="at">Beta (95% CI)</span><span class="st">`</span> <span class="ot">=</span> <span class="fu">paste0</span>(Beta, <span class="st">" (95% CI: "</span>,LCL_Beta,<span class="st">" - "</span>, UCL_Beta,<span class="st">")"</span>),</span>
+<span id="cb10-3"><a href="#cb10-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">BSM =</span> <span class="fu">case_when</span>(DV <span class="sc">==</span> <span class="st">"HTCM"</span> <span class="sc">~</span> <span class="st">"Height (cm)"</span>, </span>
+<span id="cb10-4"><a href="#cb10-4" aria-hidden="true" tabindex="-1"></a>                         DV <span class="sc">==</span> <span class="st">"BMIKGM2"</span> <span class="sc">~</span> <span class="st">"BMI (kg/m2)"</span>,</span>
+<span id="cb10-5"><a href="#cb10-5" aria-hidden="true" tabindex="-1"></a>                         DV <span class="sc">==</span> <span class="st">"BSAMOSM2"</span> <span class="sc">~</span> <span class="st">"BSA-Moesteller (m2)"</span>, </span>
+<span id="cb10-6"><a href="#cb10-6" aria-hidden="true" tabindex="-1"></a>                         DV <span class="sc">==</span> <span class="st">"BSADUBM2"</span> <span class="sc">~</span> <span class="st">"BSA-DuBois (m2)"</span>, </span>
+<span id="cb10-7"><a href="#cb10-7" aria-hidden="true" tabindex="-1"></a>                         DV <span class="sc">==</span> <span class="st">"WTKG"</span> <span class="sc">~</span> <span class="st">"Body Weight (kg)"</span>, </span>
+<span id="cb10-8"><a href="#cb10-8" aria-hidden="true" tabindex="-1"></a>                         <span class="at">.default =</span> <span class="fu">paste</span>(<span class="fu">gsub</span>(<span class="st">"KG"</span>, <span class="st">""</span>, DV), <span class="st">"(kg)"</span>))</span>
+<span id="cb10-9"><a href="#cb10-9" aria-hidden="true" tabindex="-1"></a>         ) <span class="sc">%&gt;%</span> </span>
+<span id="cb10-10"><a href="#cb10-10" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">BSM =</span> <span class="fu">factor</span>(BSM, </span>
+<span id="cb10-11"><a href="#cb10-11" aria-hidden="true" tabindex="-1"></a>                      <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Height (cm)"</span>,</span>
+<span id="cb10-12"><a href="#cb10-12" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"BSA-DuBois (m2)"</span> ,</span>
+<span id="cb10-13"><a href="#cb10-13" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"BSA-Moesteller (m2)"</span>,</span>
+<span id="cb10-14"><a href="#cb10-14" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"AIBW (kg)"</span>,</span>
+<span id="cb10-15"><a href="#cb10-15" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"FFW (kg)"</span>,</span>
+<span id="cb10-16"><a href="#cb10-16" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"BMI (kg/m2)"</span>,</span>
+<span id="cb10-17"><a href="#cb10-17" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"LBW (kg)"</span>,</span>
+<span id="cb10-18"><a href="#cb10-18" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"IBW (kg)"</span>, </span>
+<span id="cb10-19"><a href="#cb10-19" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"Body Weight (kg)"</span>)))</span>
+<span id="cb10-20"><a href="#cb10-20" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-21"><a href="#cb10-21" aria-hidden="true" tabindex="-1"></a>summary_fit <span class="ot">&lt;-</span> fit_labels <span class="sc">%&gt;%</span> </span>
+<span id="cb10-22"><a href="#cb10-22" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">GAMMA_ALPHA01 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">0.1</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
+<span id="cb10-23"><a href="#cb10-23" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA03 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">0.3</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
+<span id="cb10-24"><a href="#cb10-24" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA05 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">0.5</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
+<span id="cb10-25"><a href="#cb10-25" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA07 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">0.7</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
+<span id="cb10-26"><a href="#cb10-26" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA09 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">0.9</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
+<span id="cb10-27"><a href="#cb10-27" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA10 =</span> <span class="fu">signif</span>(Beta, <span class="at">digits=</span><span class="dv">3</span>), </span>
+<span id="cb10-28"><a href="#cb10-28" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA13 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">1.3</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
+<span id="cb10-29"><a href="#cb10-29" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA15 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">1.5</span>, <span class="at">digits=</span><span class="dv">3</span>), </span>
+<span id="cb10-30"><a href="#cb10-30" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA17 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">1.7</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
+<span id="cb10-31"><a href="#cb10-31" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA20 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="dv">2</span>, <span class="at">digits=</span><span class="dv">3</span>)) </span>
+<span id="cb10-32"><a href="#cb10-32" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-33"><a href="#cb10-33" aria-hidden="true" tabindex="-1"></a>summary_fit_long <span class="ot">&lt;-</span> summary_fit <span class="sc">%&gt;%</span> </span>
+<span id="cb10-34"><a href="#cb10-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(GAMMA_ALPHA01<span class="sc">:</span>GAMMA_ALPHA20, <span class="at">names_to =</span> <span class="st">"Alpha"</span>, <span class="at">values_to =</span> <span class="st">"Gamma"</span>) <span class="sc">%&gt;%</span> </span>
+<span id="cb10-35"><a href="#cb10-35" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Alpha =</span> <span class="fu">as.numeric</span>(<span class="fu">gsub</span>(<span class="st">"[^0-9]+"</span>, <span class="st">""</span>, Alpha))<span class="sc">/</span><span class="dv">10</span>) </span>
+<span id="cb10-36"><a href="#cb10-36" aria-hidden="true" tabindex="-1"></a></span>
+<span id="cb10-37"><a href="#cb10-37" aria-hidden="true" tabindex="-1"></a>fit_labels</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="cell-output cell-output-stdout">
+<pre><code>        DV  IDV  CI Intercept  Beta StandardError LCL_Beta UCL_Beta
+1     HTCM WTKG 95%    -5.360 1.900       0.05130    1.800    2.000
+2  BMIKGM2 WTKG 95%     1.070 0.983       0.00841    0.966    0.999
+3 BSAMOSM2 WTKG 95%     3.250 1.720       0.00499    1.710    1.730
+4 BSADUBM2 WTKG 95%     3.240 1.780       0.00818    1.760    1.790
+5    IBWKG WTKG 95%     1.860 0.607       0.01730    0.573    0.641
+6   AIBWKG WTKG 95%    -0.619 1.180       0.00941    1.160    1.200
+7    FFWKG WTKG 95%     0.175 1.050       0.01080    1.030    1.070
+8    LBWKG WTKG 95%     1.030 0.845       0.00921    0.827    0.863
+                  Beta (95% CI)                 BSM
+1         1.9 (95% CI: 1.8 - 2)         Height (cm)
+2 0.983 (95% CI: 0.966 - 0.999)         BMI (kg/m2)
+3    1.72 (95% CI: 1.71 - 1.73) BSA-Moesteller (m2)
+4    1.78 (95% CI: 1.76 - 1.79)     BSA-DuBois (m2)
+5 0.607 (95% CI: 0.573 - 0.641)            IBW (kg)
+6     1.18 (95% CI: 1.16 - 1.2)           AIBW (kg)
+7    1.05 (95% CI: 1.03 - 1.07)            FFW (kg)
+8 0.845 (95% CI: 0.827 - 0.863)            LBW (kg)</code></pre>
+</div>
+</div>
+</section>
+<section id="visualize-the-log-log-relationship" class="level2">
+<h2 class="anchored" data-anchor-id="visualize-the-log-log-relationship">Visualize the log-log relationship</h2>
+<p>Visualize log-log relationship between each metric and bdoy weight. Define function for plots.</p>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb12"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb12-1"><a href="#cb12-1" aria-hidden="true" tabindex="-1"></a>concordplot <span class="ot">&lt;-</span> <span class="cf">function</span>(metric, <span class="at">col_point =</span> <span class="st">"grey30"</span>, <span class="at">col_fit =</span> <span class="st">"black"</span>, <span class="at">shape_point =</span> <span class="dv">22</span>){</span>
+<span id="cb12-2"><a href="#cb12-2" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-3"><a href="#cb12-3" aria-hidden="true" tabindex="-1"></a>  mod <span class="ot">&lt;-</span> <span class="fu">lm</span>(<span class="fu">log</span>(anthro_adult[[<span class="st">"WTKG"</span>]]) <span class="sc">~</span> <span class="fu">log</span>(anthro_adult[[metric]]))</span>
+<span id="cb12-4"><a href="#cb12-4" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-5"><a href="#cb12-5" aria-hidden="true" tabindex="-1"></a>  plot <span class="ot">&lt;-</span> <span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">y =</span> WTKG, <span class="at">x =</span> <span class="sc">!!</span><span class="fu">sym</span>(metric), <span class="at">col =</span> SEX), <span class="at">data =</span> anthro_adult) <span class="sc">+</span> </span>
+<span id="cb12-6"><a href="#cb12-6" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_point</span>(<span class="at">shape =</span> shape_point, <span class="at">alpha_point =</span> <span class="fl">0.5</span>)<span class="sc">+</span></span>
+<span id="cb12-7"><a href="#cb12-7" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"lm"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>, <span class="at">color =</span> col_fit) <span class="sc">+</span></span>
+<span id="cb12-8"><a href="#cb12-8" aria-hidden="true" tabindex="-1"></a>    <span class="fu">geom_smooth</span>(<span class="at">method =</span> <span class="st">"loess"</span>, <span class="at">se =</span> <span class="cn">FALSE</span>, <span class="at">color =</span> col_point, <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span> </span>
+<span id="cb12-9"><a href="#cb12-9" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_x_log10</span>(<span class="at">guide =</span> <span class="st">"axis_logticks"</span>) <span class="sc">+</span></span>
+<span id="cb12-10"><a href="#cb12-10" aria-hidden="true" tabindex="-1"></a>    <span class="fu">scale_y_log10</span>(<span class="at">guide =</span> <span class="st">"axis_logticks"</span>) <span class="sc">+</span> </span>
+<span id="cb12-11"><a href="#cb12-11" aria-hidden="true" tabindex="-1"></a>    <span class="fu">labs</span>(<span class="at">caption =</span> <span class="fu">paste</span>(<span class="st">"Beta = "</span>, fit_labels<span class="sc">$</span><span class="st">`</span><span class="at">Beta (95% CI)</span><span class="st">`</span>[fit_labels<span class="sc">$</span>DV<span class="sc">==</span>metric])) <span class="sc">+</span></span>
+<span id="cb12-12"><a href="#cb12-12" aria-hidden="true" tabindex="-1"></a>    <span class="fu">theme_bw</span>()</span>
+<span id="cb12-13"><a href="#cb12-13" aria-hidden="true" tabindex="-1"></a>  </span>
+<span id="cb12-14"><a href="#cb12-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(plot)</span>
+<span id="cb12-15"><a href="#cb12-15" aria-hidden="true" tabindex="-1"></a>}</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+</div>
+<div class="cell">
+<div class="sourceCode cell-code" id="cb13"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb13-1"><a href="#cb13-1" aria-hidden="true" tabindex="-1"></a><span class="fu">map</span>(params, concordplot)</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output cell-output-stdout">
 <pre><code>[[1]]</code></pre>
 </div>
@@ -354,102 +456,24 @@ window.Quarto = {
 </div>
 </div>
 </section>
-<section id="log-log-regression" class="level2">
-<h2 class="anchored" data-anchor-id="log-log-regression">Log-Log Regression</h2>
-<p>Fit log-log regressions based on <code>NHANES</code> to determine the <span class="math inline">\(\beta\)</span> values.</p>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb18"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb18-1"><a href="#cb18-1" aria-hidden="true" tabindex="-1"></a>sumfit_loglog <span class="ot">&lt;-</span> <span class="cf">function</span>(exp_var_x,</span>
-<span id="cb18-2"><a href="#cb18-2" aria-hidden="true" tabindex="-1"></a>                          <span class="at">exp_var_y =</span> <span class="st">"WTKG"</span>, </span>
-<span id="cb18-3"><a href="#cb18-3" aria-hidden="true" tabindex="-1"></a>                          <span class="at">method =</span> <span class="st">"normal"</span>,</span>
-<span id="cb18-4"><a href="#cb18-4" aria-hidden="true" tabindex="-1"></a>                          <span class="at">ci =</span> <span class="fl">0.95</span>,</span>
-<span id="cb18-5"><a href="#cb18-5" aria-hidden="true" tabindex="-1"></a>                          <span class="at">sigdigits =</span> <span class="dv">3</span>) {</span>
-<span id="cb18-6"><a href="#cb18-6" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb18-7"><a href="#cb18-7" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span>method <span class="sc">%in%</span> <span class="fu">c</span>(<span class="st">"normal"</span>, <span class="st">"tdist"</span>)) {rlang<span class="sc">::</span><span class="fu">abort</span>(<span class="at">message =</span> <span class="st">"argument `method` must be 'normal' or 'tdist'"</span>)}</span>
-<span id="cb18-8"><a href="#cb18-8" aria-hidden="true" tabindex="-1"></a>  <span class="cf">if</span>(<span class="sc">!</span>ci <span class="sc">%in%</span> <span class="fu">c</span>(<span class="fl">0.90</span>, <span class="fl">0.95</span>)) {rlang<span class="sc">::</span><span class="fu">abort</span>(<span class="at">message =</span> <span class="st">"argument `ci` must be 0.90 or 0.95"</span>)}</span>
-<span id="cb18-9"><a href="#cb18-9" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-10"><a href="#cb18-10" aria-hidden="true" tabindex="-1"></a>  form <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">as.formula</span>(<span class="fu">paste</span>(<span class="fu">paste0</span>(<span class="st">"log("</span>,exp_var_y,<span class="st">")"</span>),<span class="st">"~"</span>,<span class="fu">paste0</span>(<span class="st">"log("</span>,exp_var_x,<span class="st">")"</span>)))</span>
-<span id="cb18-11"><a href="#cb18-11" aria-hidden="true" tabindex="-1"></a>  fit <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">lm</span>(form, anthro_adult)</span>
-<span id="cb18-12"><a href="#cb18-12" aria-hidden="true" tabindex="-1"></a>  </span>
-<span id="cb18-13"><a href="#cb18-13" aria-hidden="true" tabindex="-1"></a>  int <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">coef</span>(fit)[[<span class="dv">1</span>]]</span>
-<span id="cb18-14"><a href="#cb18-14" aria-hidden="true" tabindex="-1"></a>  est <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">coef</span>(fit)[[<span class="dv">2</span>]]</span>
-<span id="cb18-15"><a href="#cb18-15" aria-hidden="true" tabindex="-1"></a>  se <span class="ot">&lt;-</span> <span class="fu">sqrt</span>(<span class="fu">diag</span>(stats<span class="sc">::</span><span class="fu">vcov</span>(fit)))[[<span class="dv">2</span>]]</span>
-<span id="cb18-16"><a href="#cb18-16" aria-hidden="true" tabindex="-1"></a>  z <span class="ot">&lt;-</span> stats<span class="sc">::</span><span class="fu">qt</span>((<span class="dv">1</span> <span class="sc">+</span> ci)<span class="sc">/</span><span class="dv">2</span>, (<span class="fu">length</span>(fit<span class="sc">$</span>residuals)<span class="sc">-</span><span class="dv">1</span>))</span>
-<span id="cb18-17"><a href="#cb18-17" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-18"><a href="#cb18-18" aria-hidden="true" tabindex="-1"></a>  tab <span class="ot">&lt;-</span> <span class="fu">data.frame</span>(</span>
-<span id="cb18-19"><a href="#cb18-19" aria-hidden="true" tabindex="-1"></a>    <span class="at">DV =</span> exp_var_x, </span>
-<span id="cb18-20"><a href="#cb18-20" aria-hidden="true" tabindex="-1"></a>    <span class="at">IDV =</span> exp_var_y,</span>
-<span id="cb18-21"><a href="#cb18-21" aria-hidden="true" tabindex="-1"></a>    <span class="at">CI =</span> <span class="fu">paste0</span>(ci<span class="sc">*</span><span class="dv">100</span>, <span class="st">"%"</span>),</span>
-<span id="cb18-22"><a href="#cb18-22" aria-hidden="true" tabindex="-1"></a>    <span class="at">Intercept =</span> <span class="fu">signif</span>(int, <span class="at">digits=</span>sigdigits),</span>
-<span id="cb18-23"><a href="#cb18-23" aria-hidden="true" tabindex="-1"></a>    <span class="at">Beta =</span> <span class="fu">signif</span>(est, <span class="at">digits =</span> sigdigits),</span>
-<span id="cb18-24"><a href="#cb18-24" aria-hidden="true" tabindex="-1"></a>    <span class="at">StandardError =</span> <span class="fu">signif</span>(se, <span class="at">digits=</span>sigdigits),</span>
-<span id="cb18-25"><a href="#cb18-25" aria-hidden="true" tabindex="-1"></a>    <span class="at">LCL_Beta =</span> dplyr<span class="sc">::</span><span class="fu">case_when</span>(method <span class="sc">==</span> <span class="st">"normal"</span> <span class="sc">&amp;</span> ci <span class="sc">==</span> <span class="fl">0.95</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">-</span> <span class="fl">1.96</span><span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
-<span id="cb18-26"><a href="#cb18-26" aria-hidden="true" tabindex="-1"></a>                           method <span class="sc">==</span> <span class="st">"normal"</span> <span class="sc">&amp;</span> ci <span class="sc">==</span> <span class="fl">0.90</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">-</span> <span class="fl">1.64</span><span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
-<span id="cb18-27"><a href="#cb18-27" aria-hidden="true" tabindex="-1"></a>                           method <span class="sc">==</span> <span class="st">"tdist"</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">-</span> z<span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
-<span id="cb18-28"><a href="#cb18-28" aria-hidden="true" tabindex="-1"></a>                           <span class="at">.default =</span> <span class="cn">NA_real_</span>),</span>
-<span id="cb18-29"><a href="#cb18-29" aria-hidden="true" tabindex="-1"></a>    <span class="at">UCL_Beta =</span> dplyr<span class="sc">::</span><span class="fu">case_when</span>(method <span class="sc">==</span> <span class="st">"normal"</span> <span class="sc">&amp;</span> ci <span class="sc">==</span> <span class="fl">0.95</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">+</span> <span class="fl">1.96</span><span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
-<span id="cb18-30"><a href="#cb18-30" aria-hidden="true" tabindex="-1"></a>                           method <span class="sc">==</span> <span class="st">"normal"</span> <span class="sc">&amp;</span> ci <span class="sc">==</span> <span class="fl">0.90</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">+</span> <span class="fl">1.64</span><span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
-<span id="cb18-31"><a href="#cb18-31" aria-hidden="true" tabindex="-1"></a>                           method <span class="sc">==</span> <span class="st">"tdist"</span> <span class="sc">~</span> <span class="fu">signif</span>(est <span class="sc">+</span> z<span class="sc">*</span>se, <span class="at">digits=</span>sigdigits),</span>
-<span id="cb18-32"><a href="#cb18-32" aria-hidden="true" tabindex="-1"></a>                           <span class="at">.default =</span> <span class="cn">NA_real_</span>))</span>
-<span id="cb18-33"><a href="#cb18-33" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb18-34"><a href="#cb18-34" aria-hidden="true" tabindex="-1"></a>  <span class="fu">return</span>(tab)</span>
-<span id="cb18-35"><a href="#cb18-35" aria-hidden="true" tabindex="-1"></a>} </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb19"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb19-1"><a href="#cb19-1" aria-hidden="true" tabindex="-1"></a>fit <span class="ot">&lt;-</span> <span class="fu">map_df</span>(params, sumfit_loglog) <span class="sc">%&gt;%</span> </span>
-<span id="cb19-2"><a href="#cb19-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">BSM =</span> <span class="fu">case_when</span>(DV <span class="sc">==</span> <span class="st">"HTCM"</span> <span class="sc">~</span> <span class="st">"Height (cm)"</span>, </span>
-<span id="cb19-3"><a href="#cb19-3" aria-hidden="true" tabindex="-1"></a>                         DV <span class="sc">==</span> <span class="st">"BMIKGM2"</span> <span class="sc">~</span> <span class="st">"BMI (kg/m2)"</span>,</span>
-<span id="cb19-4"><a href="#cb19-4" aria-hidden="true" tabindex="-1"></a>                         DV <span class="sc">==</span> <span class="st">"BSAMOSM2"</span> <span class="sc">~</span> <span class="st">"BSA-Moesteller (m2)"</span>, </span>
-<span id="cb19-5"><a href="#cb19-5" aria-hidden="true" tabindex="-1"></a>                         DV <span class="sc">==</span> <span class="st">"BSADUBM2"</span> <span class="sc">~</span> <span class="st">"BSA-DuBois (m2)"</span>, </span>
-<span id="cb19-6"><a href="#cb19-6" aria-hidden="true" tabindex="-1"></a>                         DV <span class="sc">==</span> <span class="st">"WTKG"</span> <span class="sc">~</span> <span class="st">"Body Weight (kg)"</span>, </span>
-<span id="cb19-7"><a href="#cb19-7" aria-hidden="true" tabindex="-1"></a>                         <span class="at">.default =</span> <span class="fu">paste</span>(<span class="fu">gsub</span>(<span class="st">"KG"</span>, <span class="st">""</span>, DV), <span class="st">"(kg)"</span>))</span>
-<span id="cb19-8"><a href="#cb19-8" aria-hidden="true" tabindex="-1"></a>         ) <span class="sc">%&gt;%</span> </span>
-<span id="cb19-9"><a href="#cb19-9" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">BSM =</span> <span class="fu">factor</span>(BSM, </span>
-<span id="cb19-10"><a href="#cb19-10" aria-hidden="true" tabindex="-1"></a>                      <span class="at">levels =</span> <span class="fu">c</span>(<span class="st">"Height (cm)"</span>,</span>
-<span id="cb19-11"><a href="#cb19-11" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"BSA-DuBois (m2)"</span> ,</span>
-<span id="cb19-12"><a href="#cb19-12" aria-hidden="true" tabindex="-1"></a>                                <span class="st">"BSA-Moesteller (m2)"</span>,</span>
-<span id="cb19-13"><a href="#cb19-13" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"AIBW (kg)"</span>,</span>
-<span id="cb19-14"><a href="#cb19-14" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"FFW (kg)"</span>,</span>
-<span id="cb19-15"><a href="#cb19-15" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"BMI (kg/m2)"</span>,</span>
-<span id="cb19-16"><a href="#cb19-16" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"LBW (kg)"</span>,</span>
-<span id="cb19-17"><a href="#cb19-17" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"IBW (kg)"</span>, </span>
-<span id="cb19-18"><a href="#cb19-18" aria-hidden="true" tabindex="-1"></a>                                 <span class="st">"Body Weight (kg)"</span>)))</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-<div class="cell">
-<div class="sourceCode cell-code" id="cb20"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb20-1"><a href="#cb20-1" aria-hidden="true" tabindex="-1"></a>summary_fit <span class="ot">&lt;-</span> fit <span class="sc">%&gt;%</span> </span>
-<span id="cb20-2"><a href="#cb20-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">GAMMA_ALPHA01 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">0.1</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
-<span id="cb20-3"><a href="#cb20-3" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA03 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">0.3</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
-<span id="cb20-4"><a href="#cb20-4" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA05 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">0.5</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
-<span id="cb20-5"><a href="#cb20-5" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA07 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">0.7</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
-<span id="cb20-6"><a href="#cb20-6" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA09 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">0.9</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
-<span id="cb20-7"><a href="#cb20-7" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA10 =</span> <span class="fu">signif</span>(Beta, <span class="at">digits=</span><span class="dv">3</span>), </span>
-<span id="cb20-8"><a href="#cb20-8" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA13 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">1.3</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
-<span id="cb20-9"><a href="#cb20-9" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA15 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">1.5</span>, <span class="at">digits=</span><span class="dv">3</span>), </span>
-<span id="cb20-10"><a href="#cb20-10" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA17 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="fl">1.7</span>, <span class="at">digits=</span><span class="dv">3</span>),</span>
-<span id="cb20-11"><a href="#cb20-11" aria-hidden="true" tabindex="-1"></a>         <span class="at">GAMMA_ALPHA20 =</span> <span class="fu">signif</span>(Beta<span class="sc">*</span><span class="dv">2</span>, <span class="at">digits=</span><span class="dv">3</span>)) </span>
-<span id="cb20-12"><a href="#cb20-12" aria-hidden="true" tabindex="-1"></a></span>
-<span id="cb20-13"><a href="#cb20-13" aria-hidden="true" tabindex="-1"></a>summary_fit_long <span class="ot">&lt;-</span> summary_fit <span class="sc">%&gt;%</span> </span>
-<span id="cb20-14"><a href="#cb20-14" aria-hidden="true" tabindex="-1"></a>  <span class="fu">pivot_longer</span>(GAMMA_ALPHA01<span class="sc">:</span>GAMMA_ALPHA20, <span class="at">names_to =</span> <span class="st">"Alpha"</span>, <span class="at">values_to =</span> <span class="st">"Gamma"</span>) <span class="sc">%&gt;%</span> </span>
-<span id="cb20-15"><a href="#cb20-15" aria-hidden="true" tabindex="-1"></a>  <span class="fu">mutate</span>(<span class="at">Alpha =</span> <span class="fu">as.numeric</span>(<span class="fu">gsub</span>(<span class="st">"[^0-9]+"</span>, <span class="st">""</span>, Alpha))<span class="sc">/</span><span class="dv">10</span>) </span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
-</div>
-</section>
 </section>
 <section id="plot" class="level1">
 <h1>Plot</h1>
 <p>Plot the relationship between values of <span class="math inline">\(\alpha\)</span> (<code>y</code>) to be fitted from clinical data for molecules and the fitted values of <span class="math inline">\(\beta\)</span> * <span class="math inline">\(\alpha\)</span> (<code>x * y</code>).</p>
 <div class="cell">
-<div class="sourceCode cell-code" id="cb21"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb21-1"><a href="#cb21-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> Alpha, <span class="at">y =</span> Gamma, <span class="at">col =</span> BSM), <span class="at">data =</span> summary_fit_long) <span class="sc">+</span> </span>
-<span id="cb21-2"><a href="#cb21-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span></span>
-<span id="cb21-3"><a href="#cb21-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="fu">aes</span>(<span class="at">intercept =</span> <span class="dv">0</span>, <span class="at">slope =</span> Beta, <span class="at">col =</span> BSM), <span class="at">data =</span> fit) <span class="sc">+</span> </span>
-<span id="cb21-4"><a href="#cb21-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">1</span>) <span class="sc">+</span> </span>
-<span id="cb21-5"><a href="#cb21-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fu">c</span>(<span class="fl">0.8</span>, <span class="fl">1.2</span>), <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span> </span>
-<span id="cb21-6"><a href="#cb21-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="dv">2</span>), <span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="fl">0.75</span>, <span class="dv">1</span>, <span class="fl">1.25</span>, <span class="fl">1.5</span>, <span class="dv">2</span>)) <span class="sc">+</span> </span>
-<span id="cb21-7"><a href="#cb21-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="dv">2</span>), <span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="fl">1.5</span>, <span class="dv">2</span>)) <span class="sc">+</span> </span>
-<span id="cb21-8"><a href="#cb21-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">y =</span> <span class="fu">expression</span>(<span class="fu">paste</span>(<span class="st">"Dosing Body Size Metric Exponent ("</span>, gamma, <span class="st">")"</span>)), </span>
-<span id="cb21-9"><a href="#cb21-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="fu">expression</span>(<span class="fu">paste</span>(<span class="st">"Body Weight Exponent ("</span>, alpha, <span class="st">")"</span>)), </span>
-<span id="cb21-10"><a href="#cb21-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="fu">expression</span>(<span class="fu">paste</span>(<span class="st">"Body Size Metric (slope = "</span>, beta, <span class="st">")"</span>)))<span class="sc">+</span></span>
-<span id="cb21-11"><a href="#cb21-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span> </span>
-<span id="cb21-12"><a href="#cb21-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">panel.grid.major.y =</span> <span class="fu">element_blank</span>(), </span>
-<span id="cb21-13"><a href="#cb21-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">panel.grid.minor.y =</span> <span class="fu">element_blank</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
+<div class="sourceCode cell-code" id="cb22"><pre class="sourceCode r code-with-copy"><code class="sourceCode r"><span id="cb22-1"><a href="#cb22-1" aria-hidden="true" tabindex="-1"></a><span class="fu">ggplot</span>(<span class="fu">aes</span>(<span class="at">x =</span> Alpha, <span class="at">y =</span> Gamma, <span class="at">col =</span> BSM), <span class="at">data =</span> summary_fit_long) <span class="sc">+</span> </span>
+<span id="cb22-2"><a href="#cb22-2" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_point</span>() <span class="sc">+</span></span>
+<span id="cb22-3"><a href="#cb22-3" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_abline</span>(<span class="fu">aes</span>(<span class="at">intercept =</span> <span class="dv">0</span>, <span class="at">slope =</span> Beta, <span class="at">col =</span> BSM), <span class="at">data =</span> fit_labels) <span class="sc">+</span> </span>
+<span id="cb22-4"><a href="#cb22-4" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="dv">1</span>) <span class="sc">+</span> </span>
+<span id="cb22-5"><a href="#cb22-5" aria-hidden="true" tabindex="-1"></a>  <span class="fu">geom_hline</span>(<span class="at">yintercept =</span> <span class="fu">c</span>(<span class="fl">0.8</span>, <span class="fl">1.2</span>), <span class="at">linetype =</span> <span class="st">"dashed"</span>) <span class="sc">+</span> </span>
+<span id="cb22-6"><a href="#cb22-6" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_x_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="dv">2</span>), <span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.25</span>, <span class="fl">0.5</span>, <span class="fl">0.75</span>, <span class="dv">1</span>, <span class="fl">1.25</span>, <span class="fl">1.5</span>, <span class="dv">2</span>)) <span class="sc">+</span> </span>
+<span id="cb22-7"><a href="#cb22-7" aria-hidden="true" tabindex="-1"></a>  <span class="fu">scale_y_continuous</span>(<span class="at">limits =</span> <span class="fu">c</span>(<span class="cn">NA</span>, <span class="dv">2</span>), <span class="at">breaks =</span> <span class="fu">c</span>(<span class="dv">0</span>, <span class="fl">0.5</span>, <span class="dv">1</span>, <span class="fl">1.5</span>, <span class="dv">2</span>)) <span class="sc">+</span> </span>
+<span id="cb22-8"><a href="#cb22-8" aria-hidden="true" tabindex="-1"></a>  <span class="fu">labs</span>(<span class="at">y =</span> <span class="fu">expression</span>(<span class="fu">paste</span>(<span class="st">"Dosing Body Size Metric Exponent ("</span>, gamma, <span class="st">")"</span>)), </span>
+<span id="cb22-9"><a href="#cb22-9" aria-hidden="true" tabindex="-1"></a>       <span class="at">x =</span> <span class="fu">expression</span>(<span class="fu">paste</span>(<span class="st">"Body Weight Exponent ("</span>, alpha, <span class="st">")"</span>)), </span>
+<span id="cb22-10"><a href="#cb22-10" aria-hidden="true" tabindex="-1"></a>       <span class="at">col =</span> <span class="fu">expression</span>(<span class="fu">paste</span>(<span class="st">"Body Size Metric (slope = "</span>, beta, <span class="st">")"</span>)))<span class="sc">+</span></span>
+<span id="cb22-11"><a href="#cb22-11" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme_bw</span>() <span class="sc">+</span> </span>
+<span id="cb22-12"><a href="#cb22-12" aria-hidden="true" tabindex="-1"></a>  <span class="fu">theme</span>(<span class="at">panel.grid.major.y =</span> <span class="fu">element_blank</span>(), </span>
+<span id="cb22-13"><a href="#cb22-13" aria-hidden="true" tabindex="-1"></a>        <span class="at">panel.grid.minor.y =</span> <span class="fu">element_blank</span>())</span></code><button title="Copy to Clipboard" class="code-copy-button"><i class="bi"></i></button></pre></div>
 <div class="cell-output-display">
 <div>
 <figure class="figure">

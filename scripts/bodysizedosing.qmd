@@ -123,34 +123,8 @@ ggplot(aes(x=VALUE, color = METRIC, fill = METRIC), data = plotdata_long) +
   theme_bw()
 
 ```
-## Concordance with Body Weight
 
-Visualize log-log relationship between each metric and bdoy weight. Define function for plots.
-
-```{r plot-concord-weight-fxn}
-concordplot <- function(metric, col_point = "grey30", col_fit = "black", shape_point = 22){
-  
-  mod <- lm(log(anthro_adult[["WTKG"]]) ~ log(anthro_adult[[metric]]))
-  coef <- signif(mod$coefficients[[2]], digits=3)
-  
-  plot <- ggplot(aes(y = WTKG, x = !!sym(metric), col = SEX), data = anthro_adult) + 
-    geom_point(shape = shape_point, alpha_point = 0.5)+
-    geom_smooth(method = "lm", se = FALSE, color = col_fit) +
-    geom_smooth(method = "loess", se = FALSE, color = col_point, linetype = "dashed") + 
-    scale_x_log10(guide = "axis_logticks") +
-    scale_y_log10(guide = "axis_logticks") + 
-    labs(caption = paste("Beta = ", coef)) +
-    theme_bw()
-  
-  return(plot)
-}
-```
-
-```{r plot-concord-weight, fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
-map(params, concordplot)
-```
-
-## Log-Log Regression
+## Fit the log-log regression
 
 Fit log-log regressions based on `NHANES` to determine the $\beta$ values.
 
@@ -194,8 +168,13 @@ sumfit_loglog <- function(exp_var_x,
 ```
 
 ```{r weight-metric-fit-summary}
-fit <- map_df(params, sumfit_loglog) %>% 
-  mutate(BSM = case_when(DV == "HTCM" ~ "Height (cm)", 
+fit <- map_df(params, sumfit_loglog) 
+```
+
+```{r summary-fit}
+fit_labels <- fit %>% 
+  mutate(`Beta (95% CI)` = paste0(Beta, " (95% CI: ",LCL_Beta," - ", UCL_Beta,")"),
+         BSM = case_when(DV == "HTCM" ~ "Height (cm)", 
                          DV == "BMIKGM2" ~ "BMI (kg/m2)",
                          DV == "BSAMOSM2" ~ "BSA-Moesteller (m2)", 
                          DV == "BSADUBM2" ~ "BSA-DuBois (m2)", 
@@ -212,10 +191,8 @@ fit <- map_df(params, sumfit_loglog) %>%
                                  "LBW (kg)",
                                  "IBW (kg)", 
                                  "Body Weight (kg)")))
-```
 
-```{r summary-fit}
-summary_fit <- fit %>% 
+summary_fit <- fit_labels %>% 
   mutate(GAMMA_ALPHA01 = signif(Beta*0.1, digits=3),
          GAMMA_ALPHA03 = signif(Beta*0.3, digits=3),
          GAMMA_ALPHA05 = signif(Beta*0.5, digits=3),
@@ -230,8 +207,35 @@ summary_fit <- fit %>%
 summary_fit_long <- summary_fit %>% 
   pivot_longer(GAMMA_ALPHA01:GAMMA_ALPHA20, names_to = "Alpha", values_to = "Gamma") %>% 
   mutate(Alpha = as.numeric(gsub("[^0-9]+", "", Alpha))/10) 
+
+fit_labels
 ```
 
+## Visualize the log-log relationship
+
+Visualize log-log relationship between each metric and bdoy weight. Define function for plots.
+
+```{r plot-concord-weight-fxn}
+concordplot <- function(metric, col_point = "grey30", col_fit = "black", shape_point = 22){
+  
+  mod <- lm(log(anthro_adult[["WTKG"]]) ~ log(anthro_adult[[metric]]))
+  
+  plot <- ggplot(aes(y = WTKG, x = !!sym(metric), col = SEX), data = anthro_adult) + 
+    geom_point(shape = shape_point, alpha_point = 0.5)+
+    geom_smooth(method = "lm", se = FALSE, color = col_fit) +
+    geom_smooth(method = "loess", se = FALSE, color = col_point, linetype = "dashed") + 
+    scale_x_log10(guide = "axis_logticks") +
+    scale_y_log10(guide = "axis_logticks") + 
+    labs(caption = paste("Beta = ", fit_labels$`Beta (95% CI)`[fit_labels$DV==metric])) +
+    theme_bw()
+  
+  return(plot)
+}
+```
+
+```{r plot-concord-weight, fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
+map(params, concordplot)
+```
 
 # Plot 
 
@@ -240,7 +244,7 @@ Plot the relationship between values of $\alpha$ (`y`) to be fitted from clinica
 ```{r plot-concord-exp, fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 ggplot(aes(x = Alpha, y = Gamma, col = BSM), data = summary_fit_long) + 
   geom_point() +
-  geom_abline(aes(intercept = 0, slope = Beta, col = BSM), data = fit) + 
+  geom_abline(aes(intercept = 0, slope = Beta, col = BSM), data = fit_labels) + 
   geom_hline(yintercept = 1) + 
   geom_hline(yintercept = c(0.8, 1.2), linetype = "dashed") + 
   scale_x_continuous(limits = c(NA, 2), breaks = c(0, 0.25, 0.5, 0.75, 1, 1.25, 1.5, 2)) + 
