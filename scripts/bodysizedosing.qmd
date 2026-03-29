@@ -126,12 +126,17 @@ Visualize log-log relationship between each metric and bdoy weight. Define funct
 
 ```{r plot-concord-weight-fxn}
 concordplot <- function(metric, col_point = "grey30", col_fit = "black", shape_point = 22){
-  plot <- ggplot(aes(y = WTKG, x = !!sym(metric)), data = anthro_adult) + 
-    geom_point(shape = shape_point, color = col_fit)+
+  
+  mod <- lm(log(anthro_adult[["WTKG"]]) ~ log(anthro_adult[[metric]]))
+  coef <- signif(mod$coefficients[[2]], digits=3)
+  
+  plot <- ggplot(aes(y = WTKG, x = !!sym(metric), col = SEX), data = anthro_adult) + 
+    geom_point(shape = shape_point, alpha_point = 0.5)+
     geom_smooth(method = "lm", se = FALSE, color = col_fit) +
     geom_smooth(method = "loess", se = FALSE, color = col_point, linetype = "dashed") + 
     scale_x_log10(guide = "axis_logticks") +
     scale_y_log10(guide = "axis_logticks") + 
+    labs(caption = expression(paste("*beta* = ", coef))) +
     theme_bw()
   
   return(plot)
