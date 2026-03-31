@@ -1,8 +1,10 @@
 ---
 title: "Dosing and Body Size"
 author: "Ryan Crass"
-format: html
-editor: visual
+format: 
+    html:
+       embed-resources: true
+       self-contained-math: true
 ---
 
 # Thesis
@@ -56,7 +58,7 @@ data <- left_join(bmx, demo) %>%
 
 # Define Body Size Metrics
 
-Derive alternative body size metrics ($BSM_i$) using the equations outined in Pai et al. 2012 (https://pubmed.ncbi.nlm.nih.gov/22711238/). Subset to adults and pivot to a longer version.
+Derive alternative body size metrics ($BSM_i$) using standard equations (Pai 2012; (https://pubmed.ncbi.nlm.nih.gov/22711238/). Subset to adults and pivot to a longer version.
 
 ```{r anthropometrics, message=FALSE, warning=FALSE}
 
