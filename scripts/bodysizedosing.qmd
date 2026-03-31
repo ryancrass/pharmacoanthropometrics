@@ -9,29 +9,50 @@ format:
 
 # Thesis
 
-The pharmacokinetics of both large and small molecules scale by body weight between (e.g., animal to human dose preditions) and within (e.g., adult to pediatric dose predictions). The genereal functional form for this scaling relationship is the power model. Given most drugs are dosed to target average expoosure (Cavg, AUC), this relationship is described for clearance below, but can also be applied to central volume to target maximal (Cmax) concentration threshoods.
+The pharmacokinetics of both large and small molecules scale by body weight between (e.g., animal to human dose predictions) and within (e.g., adult to pediatric dose predictions). The general functional form for this scaling relationship is the power model.
 
-$$CL_i  = WT_i^\alpha$$
-The magnitude of the scaling relationship with body weight ($\alpha$) and the therapeutic index determine the optimal dosing paradigm. Assuming that body weight is the primary covariate of clearance, one would want to use a metric for $WT_i$ that results in an $\alpha = 1$ in the target population. 
+$$
+Y = x^\gamma
+$$
 
-To this end some authors have suggested testing a host of body size metrics (e.g., body weight [WT], body surface area [BSA], adjusted ideal body weight [AIBW]) using data from the first-in-human clinical study and selecting the metric that results in $\alpha ~ 1$. This is a valid approach; however, it introduces the operational challenge of testing multiple correlated metrics as excoriates and selecting based on the estimation rather than evaluating a single metric (e.g., body weight). Furthermore, selection of alternative body size metrics, such ask AIBW, may complicate translation to external populations, such as pediatrics, in which these metrics are not validated.
+Given most drugs are dosed to target average expoosure (Cavg, AUC), this relationship is most often considered for clearance ($CL_i$) when deriving translational predictions from non-clinical species to humans; however, it can also be applied to volume to target maximal (Cmax) concentration thresholds.
 
-I propose a simplified unified approach to evaluation of approach to assessing a body size metric for dosing to allow linear (e.g., mg / unit body size) calculation of dose amounts. As established previously, the relationship between the primary PK parameter for dosing (in this example CL) and body weigh can be described using a power unction (often centered on a reference weight, such as 70 kg): 
+$$
+CL_i = \theta_{CL,ref}*(WT_i/WT_{ref})^\alpha
+$$
 
-$$CL_i  = WT_i^\alpha$$
-This relationship ($\alpha$) can be estimated in population pharmacokinetic analysis of the first-in-human clinical trial. No other body size metrics need to be evaluated. 
+The magnitude of the scaling relationship between the PK parameter and body weight ($\alpha$) and therapeutic index in the target indication determine the optimal dosing paradigm across body size. Assuming that the metric used to describe body weight is the primary covariate of the PK parameter most strongly associated with target exposure in the disease population, one would want to use a metric for $WT_i$ that results in an $\alpha = 1$ in the target population.
 
-The body size metric ($BSM_i$) which most closely approximates a linear relationship with the primary PK parameter for dosing can be inferred from the fitted relationship of the PK parameter and body weight and the fitted relationship between body weight and the body size metric. 
+To this end some authors have suggested testing a host of body size metrics (e.g., body weight \[WT\], body surface area \[BSA\], adjusted ideal body weight \[AIBW\]) using data from the first-in-human clinical study and selecting the metric that results in $\alpha$ closest to $1$. This is a valid approach; however, it introduces challenges in analysis operations and interpretation of analysis results. First, the analysis will test multiple correlated metrics as covariates with selection based on estimation of a parameter. Furthermore, selection of alternative body size metrics (e.g., \{AIBW\}), may complicate translation to external populations, such as pediatrics, in which these metrics are not validated.
 
-$$WT_i  = BSM_i^\beta$$
-These two equations can be combined by substituting the second equation into the first for the value of the body size metric ($WT_i$) as follows:
+I propose a simplified unified approach to evaluation of approach to assessing a body size metric for dosing to allow linear (e.g., mg / unit body size) calculation of dose amounts. As established previously, the relationship between the primary PK parameter for dosing (e.g., e CL) and body weight can be described using a power function centered on a reference weight (commonly 70 kg), identical to that outlined above:
 
-$$CL_i = WT_i^\alpha = (BSM_i^\beta)^\alpha = (BSM_i)^\gamma$$
-If the objective is to identify a dose that is as close to linear (mg / $BSM_i$) as possible, then the goal should for $\gamma ~ 1$. The value of $\alpha$, the power by which the primary PK parameter for dosing scales with body weight, is estimated in a representative population. The value of $\beta$, the power for the relationship between a body size metric and body weight, can be estimated from a large population (e.g., NHANES) or a representative sample of the target population. 
+$$
+CL_i  = \theta_{CL,ref}*(WT_i/WT_{ref})^\alpha
+$$
 
-The target then can be expressed simply a:
+This relationship ($\alpha$) can be estimated in a population pharmacokinetic analysis of the first-in-human clinical trial, and in pooled analysis across trials as the clinical database matures. No other body size metrics (BSMs) need to be evaluated as covariates in order to be selected as the BSM for dosing.
 
-$$\gamma = \alpha * \beta =1 $$
+This is because at the individiaul level all body size metrics ($BSM_i$) are correlated with body weight ($WT_i$). 
+
+*Core Assumption* The correlation between body weight and body size metrics is adequately described using a power model.
+
+$$
+WT_i/WT_{ref} = BSM_i^\beta
+$$ 
+Thus, if the relationship between body weight ($WT_i$) and the primary PK parameter for dose selection (in this example $CL_i$) is known via the equation above, the relationship between this PK parameter and alternative body size metrics ($BSM_i$) is also known via the relationships described in the equations below.
+
+$$
+CL_i = \theta_{CL,ref}*(WT_i/WT_{ref})^\alpha = (BSM_i^\beta)^\alpha = (BSM_i)^\gamma
+$$ 
+Therefore the PK parameter for dose selection $CL_i$ can be assumed to be related to each $BSM_i$ by the value of $\gamma$, the product of the exponentials for the scaling relationship with body weight $alpha$ and the relationship between body weight and the body size metric $\beta$. Assuming the goal to identify a body size metric to facilitate linear derivation of dose amount (e.g., mg / unit BSM), the target then can be expressed simply a:
+
+$$
+\gamma = \alpha * \beta_{bsm} \approx 1 
+$$ 
+
+The value of $\beta$ can be estimated from a large population (e.g., NHANES), or a representative sample of the target population, including in some cases the one used to estimate the relationship with body weight ($\alpha$) using population PK analysis. Knowing both parameters for a representative sample of a target population, one can then determine the $BSM$ that is most linearly related to the PK parameter for dosing without covariate analysis of these metrics in population PK analysis. 
+
 This approach can be explored using `NHANES` as a representative dataset of adult human clinical trial participants.
 
 # Set Up
@@ -97,7 +118,7 @@ Vector of variable names for body siee metrics of interest.
 params <- c("HTCM", "BMIKGM2", "BSAMOSM2", "BSADUBM2", "IBWKG", "AIBWKG", "FFWKG", "LBWKG")
 ```
 
-Define dataset for plotting with some additional derived variables. 
+Define dataset for plotting with some additional derived variables.
 
 ```{r plotdata_long}
 plotdata_long <- anthro_adult_long %>% 
@@ -133,6 +154,7 @@ Fit log-log regressions based on `NHANES` to determine the $\beta$ values.
 ```{r weight-metric-fit-summary-function}
 sumfit_loglog <- function(exp_var_x,
                           exp_var_y = "WTKG", 
+                          ref_var_y = 70,
                           method = "normal",
                           ci = 0.95,
                           sigdigits = 3) {
@@ -140,7 +162,9 @@ sumfit_loglog <- function(exp_var_x,
   if(!method %in% c("normal", "tdist")) {rlang::abort(message = "argument `method` must be 'normal' or 'tdist'")}
   if(!ci %in% c(0.90, 0.95)) {rlang::abort(message = "argument `ci` must be 0.90 or 0.95")}
 
-  form <- stats::as.formula(paste(paste0("log(",exp_var_y,")"),"~",paste0("log(",exp_var_x,")")))
+  form <- stats::as.formula(paste(paste0("log(",exp_var_y, "/", ref_var_y, ")"),
+                                  "~",
+                                  paste0("log(",exp_var_x,")")))
   fit <- stats::lm(form, anthro_adult)
   
   int <- stats::coef(fit)[[1]]
@@ -239,9 +263,9 @@ concordplot <- function(metric, col_point = "grey30", col_fit = "black", shape_p
 map(params, concordplot)
 ```
 
-# Plot 
+# Plot
 
-Plot the relationship between values of $\alpha$ (`y`) to be fitted from clinical data for molecules and the fitted values of $\beta$ * $\alpha$ (`x * y`).
+Plot the relationship between values of $\alpha$ (`y`) to be fitted from clinical data for molecules and the fitted values of $\beta$ \* $\alpha$ (`x * y`).
 
 ```{r plot-concord-exp, fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
 ggplot(aes(x = Alpha, y = Gamma, col = BSM), data = summary_fit_long) + 
