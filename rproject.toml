@@ -16,5 +16,6 @@ repositories = [
     # {name = "dplyr", git = "https://github.com/tidyverse/dplyr.git", tag = "v1.1.4"},
 dependencies = [
     {name = "nhanesA", repository = "CRAN"},
-    {name = "tidyverse", repository = "CRAN"}
+    {name = "tidyverse", repository = "CRAN"},
+    {name = "GGally", repository = "CRAN"},
 ]
