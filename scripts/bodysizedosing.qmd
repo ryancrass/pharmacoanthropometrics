@@ -235,7 +235,7 @@ fit <- map_df(params, sumfit_loglog)
 
 And also stratified by sex.
 
-```{r plot-concord-weight, fig.height=4, fig.width=6, message=FALSE, warning=FALSE}
+```{r fit-sex}
 fit_m <- data.frame()
 fit_f <- data.frame()
 
