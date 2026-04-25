@@ -1,0 +1,10 @@
+project:
+  type: website
+  output-dir: docs
+
+website:
+  title: "Pharmacoanthropometrics"
+  navbar:
+    left:
+      - text: "Graphical Proof"
+        href: scripts/proof.qmd

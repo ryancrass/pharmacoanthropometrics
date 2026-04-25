@@ -1,0 +1,16 @@
+[
+  {
+    "objectID": "scripts/proof.html",
+    "href": "scripts/proof.html",
+    "title": "Graphical Proof: Rationale Dosing Based on Body Size",
+    "section": "",
+    "text": "Set up Enivronment\n\nlibrary(conflicted)\nlibrary(tidyverse)\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.2.0     ✔ readr     2.2.0\n✔ forcats   1.0.1     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.1\n✔ lubridate 1.9.5     ✔ tidyr     1.3.2\n✔ purrr     1.2.1     \n\nconflict_prefer(\"filter\", \"dplyr\")\n\n[conflicted] Will prefer dplyr::filter over any other package.\n\nconflict_prefer(\"lag\", \"dplyr\")\n\n[conflicted] Will prefer dplyr::lag over any other package.\n\n\n\n#####Load Packages#####\noptions(scipen=999)\nlibrary(tidyverse)\n\n\n##Functions\nwt_allo &lt;- function(wt, alpha = 1){\n  alpha*wt^0.75\n}\n\n\n##Weight Range\ndata &lt;- data.frame(wt = 1:300) #Feasible weights across lifespan and demographic variation\ndata &lt;- data %&gt;% \n  mutate(mgperkg = 1*wt, \n         allometric = wt_allo(wt))\n\n##Predictions"
+  },
+  {
+    "objectID": "scripts/proof.html#running-code",
+    "href": "scripts/proof.html#running-code",
+    "title": "Graphical Proof: Rationale Dosing Based on Body Size",
+    "section": "",
+    "text": "Set up Enivronment\n\nlibrary(conflicted)\nlibrary(tidyverse)\n\n── Attaching core tidyverse packages ──────────────────────── tidyverse 2.0.0 ──\n✔ dplyr     1.2.0     ✔ readr     2.2.0\n✔ forcats   1.0.1     ✔ stringr   1.6.0\n✔ ggplot2   4.0.2     ✔ tibble    3.3.1\n✔ lubridate 1.9.5     ✔ tidyr     1.3.2\n✔ purrr     1.2.1     \n\nconflict_prefer(\"filter\", \"dplyr\")\n\n[conflicted] Will prefer dplyr::filter over any other package.\n\nconflict_prefer(\"lag\", \"dplyr\")\n\n[conflicted] Will prefer dplyr::lag over any other package.\n\n\n\n#####Load Packages#####\noptions(scipen=999)\nlibrary(tidyverse)\n\n\n##Functions\nwt_allo &lt;- function(wt, alpha = 1){\n  alpha*wt^0.75\n}\n\n\n##Weight Range\ndata &lt;- data.frame(wt = 1:300) #Feasible weights across lifespan and demographic variation\ndata &lt;- data %&gt;% \n  mutate(mgperkg = 1*wt, \n         allometric = wt_allo(wt))\n\n##Predictions"
+  }
+]

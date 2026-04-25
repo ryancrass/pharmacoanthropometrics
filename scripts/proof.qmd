@@ -2,7 +2,7 @@
 title: "Graphical Proof: Rationale Dosing Based on Body Size"
 author: "Ryan Crass"
 format: html
-editor: Source
+editor: source
 ---
 
 ## Running Code
@@ -10,7 +10,6 @@ editor: Source
 Set up Enivronment
 
 ```{r }
-renv::status()
 library(conflicted)
 library(tidyverse)
 conflict_prefer("filter", "dplyr")
