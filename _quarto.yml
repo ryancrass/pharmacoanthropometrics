@@ -1,6 +1,9 @@
 project:
   type: website
   output-dir: docs
+  render:
+    - index.qmd
+    - scripts/proof.qmd
 
 website:
   title: "Pharmacoanthropometrics"
