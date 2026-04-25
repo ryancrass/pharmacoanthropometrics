@@ -2,12 +2,15 @@ name: Deploy to GitHub Pages
 
 on:
   push:
-    branches: [main]
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+  release:
+    types: [published]
+  workflow_dispatch:
 
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+
+permissions: read-all
 
 concurrency:
   group: pages
