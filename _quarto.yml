@@ -2,12 +2,12 @@ project:
   type: website
   output-dir: docs
   render:
-    - index.qmd
-    - scripts/proof.qmd
+    - scripts/index.qmd
+    - scripts/bodysizedosing.qmd
 
 website:
   title: "Pharmacoanthropometrics"
   navbar:
     left:
-      - text: "Graphical Proof"
-        href: scripts/proof.qmd
+      - text: "Dosing and Body Size"
+        href: scripts/bodysizedosing.qmd

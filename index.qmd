@@ -1,7 +1,0 @@
----
-title: "Pharmacoanthropometrics"
----
-
-## Graphical Proof: Rationale Dosing Based on Body Size
-
-[View the graphical proof](scripts/proof.qmd)
